@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
 const links = [
   { to: '/', label: 'Dashboard' },
@@ -9,19 +10,43 @@ const links = [
 ]
 
 export default function Sidebar() {
+  const { user, logout } = useAuth()
+
+  const getRoleBadgeClass = (role) => {
+    if (role === 'Dispatcher') return 'badge red'
+    if (role === 'Hospital Admin') return 'badge green'
+    return 'badge blue'
+  }
+
   return (
     <aside className="sidebar">
-      <div className="brand">
-        Healthcare & EMS
-        <small>Dispatch console</small>
+      <div className="sidebar-top">
+        <div className="brand">
+          Healthcare & EMS
+          <small>Dispatch console</small>
+        </div>
+        <nav className="nav">
+          {links.map((l) => (
+            <NavLink key={l.to} to={l.to} end={l.to === '/'}>
+              {l.label}
+            </NavLink>
+          ))}
+        </nav>
       </div>
-      <nav className="nav">
-        {links.map((l) => (
-          <NavLink key={l.to} to={l.to} end={l.to === '/'}>
-            {l.label}
-          </NavLink>
-        ))}
-      </nav>
+
+      {user && (
+        <div className="sidebar-user">
+          <div className="sidebar-user-info">
+            <span className="sidebar-user-name">{user.name}</span>
+            <div className="sidebar-user-meta">
+              <span className={getRoleBadgeClass(user.role)}>{user.role}</span>
+            </div>
+          </div>
+          <button type="button" className="btn-logout" onClick={logout}>
+            Log out &rarr;
+          </button>
+        </div>
+      )}
     </aside>
   )
 }
