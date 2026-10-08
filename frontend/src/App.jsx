@@ -7,6 +7,7 @@ import Patients from './pages/Patients'
 import Emergencies from './pages/Emergencies'
 import Vehicles from './pages/Vehicles'
 import Hospitals from './pages/Hospitals'
+import { accessForRole } from './roleAccess'
 
 function ProtectedLayout({ children }) {
   const { user } = useAuth()
@@ -24,6 +25,12 @@ function ProtectedLayout({ children }) {
   )
 }
 
+function RoleProtected({ children, path }) {
+  const { user } = useAuth()
+  if (!accessForRole(user?.role).routes.includes(path)) return <Navigate to="/" replace />
+  return children
+}
+
 function MainRoutes() {
   return (
     <Routes>
@@ -32,7 +39,7 @@ function MainRoutes() {
         path="/"
         element={
           <ProtectedLayout>
-            <Dashboard />
+            <RoleProtected path="/"><Dashboard /></RoleProtected>
           </ProtectedLayout>
         }
       />
@@ -40,7 +47,7 @@ function MainRoutes() {
         path="/patients"
         element={
           <ProtectedLayout>
-            <Patients />
+            <RoleProtected path="/patients"><Patients /></RoleProtected>
           </ProtectedLayout>
         }
       />
@@ -48,7 +55,7 @@ function MainRoutes() {
         path="/emergencies"
         element={
           <ProtectedLayout>
-            <Emergencies />
+            <RoleProtected path="/emergencies"><Emergencies /></RoleProtected>
           </ProtectedLayout>
         }
       />
@@ -56,7 +63,7 @@ function MainRoutes() {
         path="/vehicles"
         element={
           <ProtectedLayout>
-            <Vehicles />
+            <RoleProtected path="/vehicles"><Vehicles /></RoleProtected>
           </ProtectedLayout>
         }
       />
@@ -64,7 +71,7 @@ function MainRoutes() {
         path="/hospitals"
         element={
           <ProtectedLayout>
-            <Hospitals />
+            <RoleProtected path="/hospitals"><Hospitals /></RoleProtected>
           </ProtectedLayout>
         }
       />

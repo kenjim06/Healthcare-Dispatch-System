@@ -1,7 +1,8 @@
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { accessForRole } from '../roleAccess'
 
-const links = [
+const allLinks = [
   { to: '/', label: 'Dashboard' },
   { to: '/patients', label: 'Patients' },
   { to: '/emergencies', label: 'Emergencies' },
@@ -11,6 +12,8 @@ const links = [
 
 export default function Sidebar() {
   const { user, logout } = useAuth()
+  const routes = accessForRole(user?.role).routes
+  const links = allLinks.filter((link) => routes.includes(link.to))
 
   const getRoleBadgeClass = (role) => {
     if (role === 'Dispatcher') return 'badge red'
