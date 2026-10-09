@@ -1,16 +1,70 @@
-# React + Vite
+# Healthcare Dispatch System
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+This is the React frontend for the Healthcare Dispatch System, a role-based emergency coordination dashboard for dispatchers, field paramedics, and hospital administrators.
 
-Currently, two official plugins are available:
+## Quick start
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+npm run dev
+```
 
-## React Compiler
+Then open the local Vite URL shown in the terminal, typically:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```text
+http://localhost:5173
+```
 
-## Expanding the Oxlint configuration
+## How to use the app
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+### Sign in
+
+The app opens to a secure access portal. Use either:
+- a custom email and password
+- one of the built-in demo accounts
+
+Available demo profiles:
+- Dispatcher: Officer Sarah Jenkins
+- Lead Paramedic: Capt. Marcus Vance
+- Hospital Admin: Dr. Elena Rostova
+
+### Dashboard
+
+After signing in, the dashboard shows:
+- active emergencies
+- units still available
+- patients waiting for a vehicle
+- open hospital beds
+- the emergency queue
+
+### Patients
+
+The Patients screen displays patient records and applies role-based filtering:
+- Dispatcher sees limited patient details
+- Lead Paramedic sees relevant patient data
+- Hospital Admin sees a broader read-only view
+
+### Emergencies
+
+This page includes the emergency queue, assignment information, and prototype controls for creating or managing emergency entries.
+
+### Vehicles
+
+The Vehicles page tracks unit status, location, crew count, and service details.
+
+### Hospitals
+
+Hospital data is displayed with bed counts, wait times, and service area information. Lead Paramedic users see hospitals in their service area.
+
+## Notes
+
+- The app currently uses demo/mock data stored in `src/data.js`.
+- Authentication is client-side and stored in browser local storage.
+- Several forms and action buttons are placeholders intended to demonstrate the workflow, not a live backend implementation.
+
+## Build and preview
+
+```bash
+npm run build
+npm run preview
+```
