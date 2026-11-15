@@ -182,6 +182,8 @@ When creating an emergency, enter its address, then click the map to place the i
 
 Dispatchers and assigned Lead Paramedics can use **Complete dispatch** on an active emergency to close it. The call leaves the active queue, its dispatch and incident records remain in MySQL, and its vehicle is released when it has no other active assignment. Completed calls are available in the Emergencies page's **Archive** view.
 
+Operational data refreshes automatically every five seconds while the app is open, so emergency assignments and status changes made by another signed-in user appear without reloading the page.
+
 Hospital Admins can open the profile for a linked patient by selecting the patient's name in emergency details. The profile displays available patient medical fields and linked active/completed emergency history. This prototype does not yet model hospital-to-patient affiliation, so access is currently role-based and limited to patient-linked emergencies.
 
 ### 5. Vehicles
@@ -189,6 +191,8 @@ Hospital Admins can open the profile for a linked patient by selecting the patie
 The Vehicles page shows vehicle status, location, crew size, and assignment metadata.
 
 Dispatchers can edit a vehicle and choose an active Lead Paramedic account from **Assigned paramedic account**. The account is matched by its badge, so the paramedic's badge does not need to be re-entered. Each Lead Paramedic account can be assigned to only one vehicle; clearing the selection unassigns it.
+
+Vehicle availability reflects active dispatches, so an active call cannot be marked available or assigned to another emergency until that dispatch is completed.
 
 The app distinguishes between:
 - Available

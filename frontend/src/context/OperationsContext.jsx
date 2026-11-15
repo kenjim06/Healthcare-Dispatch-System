@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../api'
 import { useAuth } from './AuthContext'
 
@@ -14,11 +14,17 @@ export function OperationsProvider({ children }) {
   const [hospitals, setHospitals] = useState([])
   const [loadedUserId, setLoadedUserId] = useState(null)
   const [error, setError] = useState('')
+  const activeUserId = useRef(user?.id ?? null)
   const hasCurrentUserData = Boolean(user) && loadedUserId === user.id
   const isLoading = Boolean(user) && !hasCurrentUserData
 
+  useEffect(() => {
+    activeUserId.current = user?.id ?? null
+  }, [user?.id])
+
   const refreshData = useCallback(async () => {
     if (!user) return
+    const requestedUserId = user.id
     const records = [
       api.getPatients(),
       api.getEmergencies(),
@@ -28,6 +34,7 @@ export function OperationsProvider({ children }) {
     ]
     if (user.role === 'Dispatcher') records.push(api.getParamedics())
     const [patientRecords, emergencyRecords, historyRecords, vehicleRecords, hospitalRecords, paramedicAccounts = []] = await Promise.all(records)
+    if (activeUserId.current !== requestedUserId) return
     setPatients(patientRecords)
     setEmergencies(emergencyRecords)
     setArchivedEmergencies(historyRecords.filter((emergency) => emergency.status === 'Completed'))
@@ -42,13 +49,32 @@ export function OperationsProvider({ children }) {
     if (!user) return undefined
 
     let isCurrent = true
-    Promise.resolve().then(refreshData).catch((loadError) => {
-      if (!isCurrent) return
-      setError(`Unable to load operations data: ${loadError.message}`)
-    })
+    let isRefreshing = false
+    const loadData = () => {
+      if (isRefreshing) return
+      isRefreshing = true
+      Promise.resolve()
+        .then(refreshData)
+        .catch((loadError) => {
+          if (!isCurrent) return
+          setError(`Unable to load operations data: ${loadError.message}`)
+        })
+        .finally(() => {
+          isRefreshing = false
+        })
+    }
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') loadData()
+    }
+
+    loadData()
+    const intervalId = window.setInterval(refreshWhenVisible, 5000)
+    document.addEventListener('visibilitychange', refreshWhenVisible)
 
     return () => {
       isCurrent = false
+      window.clearInterval(intervalId)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
     }
   }, [refreshData, user])
 

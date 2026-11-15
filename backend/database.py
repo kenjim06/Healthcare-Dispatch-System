@@ -422,6 +422,46 @@ def _unit_id(connection: Connection, unit_number: str | None) -> int | None:
     return found
 
 
+def _active_dispatch_status_query(unit_id):
+    dispatch = tables["dispatch"]
+    return (
+        select(dispatch.c.dispatch_status)
+        .where(
+            dispatch.c.unit_id == unit_id,
+            dispatch.c.dispatch_status.notin_(("Completed", "Cancelled")),
+        )
+        .order_by(dispatch.c.dispatch_id.desc())
+        .limit(1)
+    )
+
+
+def _active_dispatch_status(connection: Connection, unit_id: int) -> str | None:
+    return connection.execute(
+        _active_dispatch_status_query(unit_id)
+    ).scalar_one_or_none()
+
+
+def _vehicle_display_status(
+    unit_status: str, active_dispatch_status: str | None
+) -> str:
+    if active_dispatch_status is not None:
+        return {
+            "Assigned": "En route",
+            "En Route": "En route",
+            "On Scene": "On scene",
+            "Transporting": "En route",
+        }[active_dispatch_status]
+    return {
+        "Available": "Available",
+        "Dispatched": "En route",
+        "En Route": "En route",
+        "On Scene": "On scene",
+        "Transporting Patient": "En route",
+        "At Hospital": "On scene",
+        "Out of Service": "Out of service",
+    }[unit_status]
+
+
 def _assignable_unit_id(
     connection: Connection,
     unit_number: str | None,
@@ -438,17 +478,10 @@ def _assignable_unit_id(
     if record is None:
         raise ValueError("Vehicle not found.")
     if record.unit_id != current_unit_id:
-        active_assignment = connection.execute(
-            select(tables["dispatch"].c.dispatch_id)
-            .where(
-                tables["dispatch"].c.unit_id == record.unit_id,
-                tables["dispatch"].c.dispatch_status.notin_(
-                    ("Completed", "Cancelled")
-                ),
-            )
-            .limit(1)
-        ).first()
-        if record.unit_status != "Available" or active_assignment is not None:
+        if (
+            record.unit_status != "Available"
+            or _active_dispatch_status(connection, record.unit_id) is not None
+        ):
             raise DispatchConflictError(
                 "This vehicle is not available for a new dispatch."
             )
@@ -711,11 +744,15 @@ def _vehicle_rows(connection: Connection) -> list[dict]:
     unit = tables["ems_unit"]
     hospital = tables["hospital"]
     profile = tables["api_unit_profile"]
+    active_dispatch_status = _active_dispatch_status_query(
+        unit.c.unit_id
+    ).scalar_subquery()
     statement = (
         select(
             unit.c.unit_id,
             unit.c.unit_number,
             unit.c.unit_status,
+            active_dispatch_status.label("active_dispatch_status"),
             unit.c.current_latitude,
             unit.c.current_longitude,
             hospital.c.city,
@@ -735,16 +772,10 @@ def _vehicle_rows(connection: Connection) -> list[dict]:
     records = _rows(connection, statement)
     for record in records:
         record["id"] = record.pop("unit_number")
-        status = record.pop("unit_status")
-        record["status"] = {
-            "Available": "Available",
-            "Dispatched": "En route",
-            "En Route": "En route",
-            "On Scene": "On scene",
-            "Transporting Patient": "En route",
-            "At Hospital": "On scene",
-            "Out of Service": "Out of service",
-        }[status]
+        record["status"] = _vehicle_display_status(
+            record.pop("unit_status"),
+            record.pop("active_dispatch_status"),
+        )
         city, state_code = record.pop("city"), record.pop("state_code")
         record["location"] = record.pop("location_label") or ", ".join(
             part for part in (city, state_code) if part
@@ -768,13 +799,22 @@ def list_vehicles(connection: Connection) -> list[dict]:
 def update_vehicle(connection: Connection, vehicle_number: str, changes: dict) -> dict | None:
     unit = tables["ems_unit"]
     record = connection.execute(
-        select(unit.c.unit_id).where(unit.c.unit_number == vehicle_number)
+        select(unit.c.unit_id)
+        .where(unit.c.unit_number == vehicle_number)
+        .with_for_update()
     ).first()
     if record is None:
         return None
     unit_id = record.unit_id
     unit_changes = {}
     if "status" in changes:
+        if (
+            changes["status"] == "Available"
+            and _active_dispatch_status(connection, unit_id) is not None
+        ):
+            raise DispatchConflictError(
+                "A vehicle with an active emergency dispatch cannot be marked available."
+            )
         status_map = {
             "Available": "Available",
             "En route": "En Route",
